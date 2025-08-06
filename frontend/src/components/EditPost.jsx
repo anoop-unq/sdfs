@@ -1,8 +1,7 @@
-// components/EditPost.jsx
-import { useContext, useState, useEffect } from 'react';
+import { useContext, useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AppContext } from '../context/AppContext';
-import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowLeft, FaTrash } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
 const EditPost = () => {
@@ -10,13 +9,18 @@ const EditPost = () => {
   const navigate = useNavigate();
   const { posts, updatePost } = useContext(AppContext);
   const [content, setContent] = useState('');
+  const [image, setImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [removeImage, setRemoveImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const post = posts.find(p => p._id === id);
     if (post) {
-      setContent(post.content);
+      setContent(post.content || '');
+      setImagePreview(post.imageUrl || null);
       setLoading(false);
     } else {
       toast.error('Post not found');
@@ -24,16 +28,53 @@ const EditPost = () => {
     }
   }, [id, posts, navigate]);
 
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file (JPEG, PNG, etc.)');
+      return;
+    }
+    
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size should be less than 5MB');
+      return;
+    }
+
+    setImage(file);
+    setImagePreview(URL.createObjectURL(file));
+    setRemoveImage(false); // If adding new image, cancel removal
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null);
+    setImagePreview(null);
+    setRemoveImage(true);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!content.trim()) {
-      toast.error('Post content cannot be empty');
+    
+    // Validate at least one of content or image exists
+    if (!content.trim() && !image && !imagePreview && !removeImage) {
+      toast.error('Post must contain either content or an image');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const success = await updatePost(id, content);
+      const formData = new FormData();
+      if (content.trim()) formData.append('content', content);
+      if (image) formData.append('image', image);
+      if (removeImage) formData.append('removeImage', 'true');
+
+      const success = await updatePost(id, formData);
       if (success) {
         navigate(-1); // Go back to previous page
       }
@@ -67,17 +108,55 @@ const EditPost = () => {
             placeholder="Edit your post..."
             className="w-full p-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows="5"
-            required
             maxLength={500}
           />
+          
+          {/* Image preview section */}
+          {imagePreview && (
+            <div className="mt-4 relative group">
+              <img 
+                src={imagePreview} 
+                alt="Preview" 
+                className="w-full max-h-96 rounded-lg object-contain border border-gray-200"
+              />
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="absolute top-3 right-3 bg-black/50 hover:bg-black/70 text-white rounded-full p-2 transition-all"
+                aria-label="Remove image"
+              >
+                <FaTrash className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+          
           <div className="flex justify-between items-center mt-4">
-            <span className="text-sm text-gray-500">
-              {content.length}/500 characters
-            </span>
+            <div className="flex items-center space-x-3">
+              <label className="inline-flex items-center space-x-2 cursor-pointer bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg transition-colors">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageChange}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="text-sm font-medium text-gray-700">
+                  {imagePreview ? 'Change Image' : 'Add Image'}
+                </span>
+              </label>
+              
+              <span className={`text-sm ${content.length === 500 ? 'text-red-500' : 'text-gray-500'}`}>
+                {content.length}/500
+              </span>
+            </div>
+            
             <button
               type="submit"
               className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50"
-              disabled={isSubmitting || !content.trim()}
+              disabled={isSubmitting || (!content.trim() && !image && !imagePreview && !removeImage)}
             >
               {isSubmitting ? 'Updating...' : 'Update Post'}
             </button>

@@ -9,6 +9,10 @@ import UserProfile from "./components/UserProfile";
 import { AddBio } from "./components/AddBio";
 import EditProfile from "./components/EditProfile";
 import EditPost from "./components/EditPost";
+import ViewUsers from "./components/ViewUsers";
+import UsersImage from "./components/UsersImage";
+import DuplicateView from "./components/DuplicateView";
+
 
 
 function App() {
@@ -38,6 +42,9 @@ function App() {
       <Route path="/add-bio/:id" element={<AddBio />}/>
       <Route path="/edit-profile/:id" element={<EditProfile />}/>
       <Route path="/edit-post/:id" element={<EditPost />}/>
+      <Route path="/view-users/:userId" element={<ViewUsers/>}/>
+      <Route path="/view-users/image/:userId" element={<UsersImage />} />
+      <Route path="/view-user/image/:userId" element={<DuplicateView />}/>
     </Routes>
   
    </div>

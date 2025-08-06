@@ -96,6 +96,7 @@ const Login = () => {
           setIsLogged(true);
           await getUserData();
           toast.success("Login Successful!");
+          localStorage.setItem('justSignedUp', 'true');
           navigate("/");
         } else {
           toast.error("User not found");
@@ -122,6 +123,7 @@ const Login = () => {
           setIsLogged(true);
           await getUserData();
           toast.success("User Registered Successfully!");
+          localStorage.setItem('justLoggedIn', 'true');
           navigate("/");
         }
       }

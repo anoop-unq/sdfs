@@ -191,28 +191,67 @@ export const AppContextProvider = (props) => {
 
   console.log(posts,"POST")
   // Create new post
-  const createPost = useCallback(async (content) => {
-    try {
-      const response = await axios.post(
-        `${backendUrl}/api/posts`,
-        { content },
-        { 
-          withCredentials: true,
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        }
-      );
+  // const createPost = useCallback(async (content) => {
+  //   try {
+  //     const response = await axios.post(
+  //       `${backendUrl}/api/posts`,
+  //       { content },
+  //       { 
+  //         withCredentials: true,
+  //         headers: {
+  //           'Content-Type': 'application/json'
+  //         }
+  //       }
+  //     );
       
-      setPosts(prevPosts => [response.data, ...prevPosts]);
-      toast.success("Post created successfully");
-      return true;
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Failed to create post");
-      return false;
-    }
-  }, [backendUrl]);
+  //     setPosts(prevPosts => [response.data, ...prevPosts]);
+  //     toast.success("Post created successfully");
+  //     return true;
+  //   } catch (error) {
+  //     toast.error(error?.response?.data?.message || "Failed to create post");
+  //     return false;
+  //   }
+  // }, [backendUrl]);
 
+
+const createPost = useCallback(async (formData) => {
+  try {
+    const response = await axios.post(
+      `${backendUrl}/api/posts`,
+      formData,
+      { 
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
+    );
+    
+    console.log('Post creation response:', response.data); // Debug
+    
+    if (response.data.success && response.data.post) {
+      // Transform the post data to match your frontend expectations
+      const newPost = {
+        ...response.data.post,
+        // Add any additional frontend-only fields if needed
+      };
+      
+      setPosts(prevPosts => [newPost, ...prevPosts]);
+      return true;
+    }
+    throw new Error(response.data.message || 'Invalid response format');
+    
+  } catch (error) {
+    console.error('Create post error:', error);
+    toast.error(
+      error.response?.data?.error || 
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to create post'
+    );
+    return false;
+  }
+}, [backendUrl]);
 
   // Add this to your context provider
 const updateUserBio = async (userId, bio) => {
@@ -315,35 +354,41 @@ const updateUserPhoto = async (userId, photoFile) => {
   }
 };
 
-// context/AppContext.js
-const updatePost = useCallback(async (postId, content) => {
+const updatePost = useCallback(async (postId, formData) => {
   try {
+    // Determine if we're sending FormData (for images) or JSON (for text-only updates)
+    const isFormData = formData instanceof FormData;
+    
+    const config = {
+      withCredentials: true,
+      headers: {
+        'Content-Type': isFormData ? 'multipart/form-data' : 'application/json'
+      }
+    };
+
     const response = await axios.put(
       `${backendUrl}/api/posts/${postId}`,
-      { content },
-      { 
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
+      isFormData ? formData : { content: formData },
+      config
     );
 
-    if (response.data.success) {
+    if (response.data.success && response.data.post) {
+      // Update the post in context
       setPosts(prevPosts => 
         prevPosts.map(post => 
-          post._id === postId ? { ...post, content } : post
+          post._id === postId ? response.data.post : post
         )
       );
       toast.success("Post updated successfully");
       return true;
     }
-    return false;
+    throw new Error(response.data.message || 'Invalid response format');
   } catch (error) {
     console.error('Update post error:', {
       error: error.response?.data || error.message
     });
     toast.error(
+      error.response?.data?.error || 
       error.response?.data?.message || 
       error.message || 
       'Failed to update post'
@@ -352,7 +397,28 @@ const updatePost = useCallback(async (postId, content) => {
   }
 }, [backendUrl]);
 
+// In your AppContext provider
+const updatePostInContext = (updatedPost) => {
+  setPosts(prevPosts => 
+    prevPosts.map(post => 
+      post._id === updatedPost._id ? updatedPost : post
+    )
+  );
+};
 
+const likePost = async (postId) => {
+  try {
+    const response = await axios.post(
+      `${backendUrl}/api/posts/${postId}/like`,
+      {},
+      { withCredentials: true }
+    );
+    return response.data; // Return the updated post data
+  } catch (error) {
+    console.error('Like failed:', error);
+    throw error; // Re-throw to handle in component
+  }
+};
 
   // Delete post
   const deletePost = useCallback(async (postId) => {
@@ -391,7 +457,9 @@ const updatePost = useCallback(async (postId, content) => {
     updateUserBio,
     updateUserProfile,
     updatePost,
-    updateUserPhoto
+    updateUserPhoto,
+    likePost,
+    updatePostInContext
   };
 
   return (
