@@ -36,8 +36,14 @@ const userSchema = new mongoose.Schema({
     },
     posts: [{
         type: mongoose.Schema.Types.ObjectId,
-        ref: "post" // Changed to lowercase to match model name
+        ref: "Post" // Changed to lowercase to match model name
     }],
+     friends: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+  friendRequests: [{
+    from: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    status: { type: String, enum: ['pending', 'accepted', 'rejected'], default: 'pending' },
+    createdAt: { type: Date, default: Date.now }
+  }],
     resetOtp: {
         type: String,
         default: ""
@@ -48,5 +54,5 @@ const userSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
-const userModel = mongoose.model('user', userSchema); // Registered as 'user' (lowercase)
+const userModel = mongoose.model('User', userSchema); // Registered as 'user' (lowercase)
 export default userModel;
