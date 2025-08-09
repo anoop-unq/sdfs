@@ -7,7 +7,7 @@ import { toast } from 'react-toastify';
 const EditPost = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { posts, updatePost } = useContext(AppContext);
+  const { posts, updatePost,deletePostImage } = useContext(AppContext);
   const [content, setContent] = useState('');
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
@@ -49,12 +49,29 @@ const EditPost = () => {
     setRemoveImage(false); // If adding new image, cancel removal
   };
 
-  const handleRemoveImage = () => {
-    setImage(null);
-    setImagePreview(null);
-    setRemoveImage(true);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+  // const handleRemoveImage = () => {
+  //   setImage(null);
+  //   setImagePreview(null);
+  //   setRemoveImage(true);
+  //   if (fileInputRef.current) {
+  //     fileInputRef.current.value = '';
+  //   }
+  // };
+
+
+   const handleRemoveImage = async () => {
+    try {
+      setIsSubmitting(true);
+      const success = await deletePostImage(id);
+      if (success) {
+        setImagePreview(null);
+        setRemoveImage(true);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = '';
+        }
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

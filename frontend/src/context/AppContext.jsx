@@ -132,7 +132,9 @@ export const AppContextProvider = (props) => {
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-
+  // Add these to your AppContext state
+const [searchQuery, setSearchQuery] = useState('');
+const [isSearching, setIsSearching] = useState(false);
   
   // Fetch user data
   const getUserData = async () => {
@@ -179,7 +181,7 @@ export const AppContextProvider = (props) => {
       const response = await axios.get(`${backendUrl}/api/posts`,{
         withCredentials:true
       });
-      console.log(response,"AUTH")
+     
       setPosts(response.data);
     } catch (error) {
       toast.error("Failed to fetch posts");
@@ -189,29 +191,7 @@ export const AppContextProvider = (props) => {
     }
   }, [backendUrl]);
 
-  console.log(posts,"POST")
-  // Create new post
-  // const createPost = useCallback(async (content) => {
-  //   try {
-  //     const response = await axios.post(
-  //       `${backendUrl}/api/posts`,
-  //       { content },
-  //       { 
-  //         withCredentials: true,
-  //         headers: {
-  //           'Content-Type': 'application/json'
-  //         }
-  //       }
-  //     );
-      
-  //     setPosts(prevPosts => [response.data, ...prevPosts]);
-  //     toast.success("Post created successfully");
-  //     return true;
-  //   } catch (error) {
-  //     toast.error(error?.response?.data?.message || "Failed to create post");
-  //     return false;
-  //   }
-  // }, [backendUrl]);
+  
 
 
 const createPost = useCallback(async (formData) => {
@@ -296,6 +276,36 @@ const updateUserBio = async (userId, bio) => {
   }
 };
 
+// Add this to your AppContext.js
+const deletePostImage = useCallback(async (postId) => {
+  try {
+    const response = await axios.delete(
+      `${backendUrl}/api/posts/${postId}/delete-image`,
+      {},
+      { withCredentials: true }
+    );
+
+    if (response.data.success) {
+      // Update the post in context
+      setPosts(prevPosts => 
+        prevPosts.map(post => 
+          post._id === postId ? response.data.post : post
+        )
+      );
+      toast.success("Image removed successfully");
+      return true;
+    }
+    throw new Error(response.data.message || 'Failed to remove image');
+  } catch (error) {
+    console.error('Delete image error:', error);
+    toast.error(
+      error.response?.data?.message || 
+      error.message || 
+      'Failed to remove image'
+    );
+    return false;
+  }
+}, [backendUrl]);
 
 const updateUserProfile = async (userId, name, bio) => {
   try {
@@ -318,6 +328,26 @@ const updateUserProfile = async (userId, name, bio) => {
     return false;
   }
 };
+
+
+
+
+// Add this function to your context
+const searchPosts = useCallback(async (query) => {
+  setIsSearching(true);
+  try {
+    const response = await axios.get(`${backendUrl}/api/posts/search?q=${query}`, {
+      withCredentials: true
+    });
+    setPosts(response.data);
+  } catch (error) {
+    toast.error("Failed to search posts");
+    console.error("Search error:", error);
+  } finally {
+    setIsSearching(false);
+  }
+}, [backendUrl]);
+
 
 
 const updateUserPhoto = async (userId, photoFile) => {
@@ -459,7 +489,9 @@ const likePost = async (postId) => {
     updatePost,
     updateUserPhoto,
     likePost,
-    updatePostInContext
+    deletePostImage,
+    updatePostInContext,
+    searchPosts
   };
 
   return (
