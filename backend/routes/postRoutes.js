@@ -5,7 +5,9 @@ import {
   getPost,
   deletePost,
   updatePost,
-  likePost
+  likePost,
+  deletePostImage,
+  searchUser
 } from '../controllers/postController.js';
 import { userAuthMiddleware } from '../middileware/userAuth.js';
 import { handleMulterErrors, upload } from '../middlewares/upload.js';
@@ -27,4 +29,8 @@ validRouter.delete("/:id",userAuthMiddleware,deletePost)
 validRouter.put("/:id",userAuthMiddleware,upload.single('image'),handleMulterErrors, updatePost)
 
 validRouter.post("/:postId/like",userAuthMiddleware,likePost)
+
+validRouter.delete("/:id/delete-image",userAuthMiddleware,deletePostImage)
+
+validRouter.get("/search",searchUser)
 export default validRouter;

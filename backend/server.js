@@ -17,7 +17,7 @@ console.log(PORT,"PORT")
 const allowedOrigins = [
     
     // 'http://localhost:5173'
-    'https://sdfs-five.vercel.app'
+    'https://smart-insta-five.vercel.app'
 
 ]
 

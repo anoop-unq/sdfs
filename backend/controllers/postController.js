@@ -420,3 +420,86 @@ export const likePost = async (req, res) => {
     });
   }
 };
+
+export const deletePostImage = async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+    
+    if (!post) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Post not found' 
+      });
+    }
+
+    // Authorization check (middleware already verified the user)
+    if (post.author.toString() !== req.userId.toString()) {
+      return res.status(403).json({ 
+        success: false,
+        error: 'Unauthorized to edit this post' 
+      });
+    }
+
+    // Check if post has an image to delete
+    if (!post.imageUrl && !post.imagePublicId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Post does not have an image to delete'
+      });
+    }
+
+    // Delete image from Cloudinary if exists
+    if (post.imagePublicId) {
+      await cloudinary.uploader.destroy(post.imagePublicId);
+    }
+
+    // Update post to remove image references
+    const updatedPost = await Post.findByIdAndUpdate(
+      req.params.id,
+      {
+        $set: {
+          imageUrl: null,
+          imagePublicId: null
+        }
+      },
+      { new: true, runValidators: true }
+    ).populate('author', 'name username avatar');
+
+    res.json({ 
+      success: true,
+      message: 'Image deleted successfully',
+      post: updatedPost 
+    });
+    
+  } catch (error) {
+    console.error("Delete image error:", error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to delete image from post',
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+
+
+// In your posts routes file
+export const searchUser = async (req, res) => {
+  try {
+    const query = req.query.q || '';
+    const posts = await Post.find({
+      $or: [
+        { content: { $regex: query, $options: 'i' } },
+        { 'author.name': { $regex: query, $options: 'i' } },
+        { 'author.username': { $regex: query, $options: 'i' } }
+      ]
+    })
+    .populate('author', 'name username avatar')
+    .sort({ createdAt: -1 });
+
+    res.json(posts);
+  } catch (error) {
+    console.error('Search error:', error);
+    res.status(500).json({ error: 'Failed to search posts' });
+  }
+};
